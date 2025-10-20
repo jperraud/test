@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Random Pair Picker</title>
+  <title>Random Challenge Duo</title>
   <style>
     :root { --bg:#0b0f14; --card:#111826; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa; }
     * { box-sizing:border-box; }
@@ -14,54 +14,26 @@
     h1 { margin:0 0 10px; font-size:clamp(22px, 2.8vw, 32px); letter-spacing:0.2px; }
     p { margin:0; color:var(--muted); }
 
-    .grid { display:grid; grid-template-columns: 1fr; gap:16px; margin-top:18px; }
-    @media (min-width: 820px) { .grid{ grid-template-columns: 1fr 1fr; } }
-
-    label { display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin:6px 0; }
-    textarea { width:100%; height:150px; background:#0b1320; color:var(--text); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px 12px; resize:vertical; }
-    .controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:14px; }
+    .controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:18px; }
     .btn { background:var(--accent); color:#061428; border:none; border-radius:12px; padding:14px 18px; font-weight:700; cursor:pointer; transition: transform .05s ease, filter .2s; }
     .btn:active { transform: translateY(1px) scale(0.995); }
     .btn.secondary { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.14); }
-    .btn.small { padding:9px 12px; font-weight:600; }
-    .spacer { flex:1; }
-
-    .inline { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:14px; }
-    input[type="checkbox"] { width:16px; height:16px; }
 
     .result { margin-top:18px; display:grid; grid-template-columns: 1fr; gap:14px; }
     @media (min-width:700px){ .result{ grid-template-columns: 1fr 1fr; } }
     .pill { background:#0b1320; border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:16px 18px; font-size:clamp(16px, 2.2vw, 22px); min-height:58px; display:flex; align-items:center; justify-content:center; text-align:center; }
 
     .footer { margin-top:14px; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-    .link { color:#93c5fd; text-decoration:underline; cursor:pointer; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Random Pair Picker</h1>
-      <p>Paste your two lists (one item per line). Hit <strong>Draw</strong> to show a random pair. Optionally avoid repeats until you reset.</p>
-
-      <div class="grid">
-        <div>
-          <label for="listA">List A</label>
-          <textarea id="listA" placeholder="e.g. Alice\nBob\nCharlie\n…"></textarea>
-        </div>
-        <div>
-          <label for="listB">List B</label>
-          <textarea id="listB" placeholder="e.g. Task 1\nTask 2\nTask 3\n…"></textarea>
-        </div>
-      </div>
+      <h1>Random Challenge Duo</h1>
+      <p>Click the button to draw <strong>two different</strong> challenges from the list.</p>
 
       <div class="controls">
         <button class="btn" id="drawBtn">🎲 Draw</button>
-        <button class="btn secondary" id="resetBtn" title="Clears history of picks">Reset</button>
-        <span class="spacer"></span>
-        <label class="inline">
-          <input type="checkbox" id="noRepeats" checked />
-          No repeats until reset
-        </label>
       </div>
 
       <div class="result">
@@ -70,121 +42,77 @@
       </div>
 
       <div class="footer">
-        <span class="link" id="saveUrl">Shareable setup link</span>
-        <span>·</span>
-        <span class="link" id="loadDemo">Load demo lists</span>
+        <span>List is baked into the page (no inputs, no storage).</span>
       </div>
     </div>
   </div>
 
   <script>
-    // Utilities
+    // Single master list of challenges. Edit freely.
+    // Keep items simple text; avoid quotes inside unless escaped.
+    const CHALLENGES = [
+      'Take a group selfie with a stranger',
+      'Trade a paperclip for something better',
+      'Find 3 objects that form your team colors',
+      'Teach someone a 10-second dance',
+      'High-five five different people',
+      'Make a paper airplane that flies 5 meters',
+      'Balance an object on your head for 20 seconds',
+      'Tell a two-line joke to another team',
+      'Recreate a famous movie pose',
+      'Spell the company name with bodies',
+      'Build the tallest tower from 10 items',
+      'Compliment three teammates',
+      'Draw a logo with your non-dominant hand',
+      'Whistle a tune—others guess it',
+      'Find someone who can speak 3+ languages',
+      'Snap a pic of something that starts with “Z”',
+      'Do 10 jumping jacks together',
+      'Teach a teammate a phrase in another language',
+      'Create a handshake in 30 seconds',
+      'Mime a profession—others guess',
+      'Find an object older than you',
+      'Build a bridge from office supplies',
+      'Write a haiku about lunch',
+      'Take a photo with everyone wearing hats',
+      'Find a hidden smiley (draw one & hide it)',
+      'Share your most-used phone app',
+      'Name 5 countries in 10 seconds',
+      'Find three items shaped like a circle',
+      'Teach the group a tongue twister',
+      'Balance a coin on its edge for 5 seconds',
+      'Do a slow-motion race',
+      'Find someone born in the same month',
+      'Make a shadow puppet animal',
+      'Tell a fun fact about your hometown',
+      'Guess a song from a hummed melody',
+      'Build a pyramid with cups (or hands)',
+      'Make a human triangle pose',
+      'Invent a 3-word team motto',
+      'Draw a map of the venue from memory'
+    ];
+
     const byId = id => document.getElementById(id);
-    const listA = byId('listA');
-    const listB = byId('listB');
     const outA = byId('outA');
     const outB = byId('outB');
     const drawBtn = byId('drawBtn');
-    const resetBtn = byId('resetBtn');
-    const noRepeats = byId('noRepeats');
 
-    // State for no-repeat draws
-    let remainingA = [];
-    let remainingB = [];
-
-    function parseList(text){
-      return text
-        .split(/\r?\n|,/)
-        .map(s => s.trim())
-        .filter(Boolean);
-    }
-
-    function pickRandom(arr){
-      if(arr.length === 0) return null;
-      const i = Math.floor(Math.random() * arr.length);
-      return arr.splice(i,1)[0]; // mutates to support no-repeat
-    }
-
-    function draw(){
-      const A = parseList(listA.value);
-      const B = parseList(listB.value);
-      if(A.length === 0 || B.length === 0){
-        flash('Please fill both lists.');
+    function drawTwoDifferent(){
+      if(CHALLENGES.length < 2){
+        outA.textContent = 'Need at least 2 challenges';
+        outB.textContent = 'Add more to the list';
         return;
       }
+      // Pick two distinct random indices
+      const i = Math.floor(Math.random() * CHALLENGES.length);
+      let j = Math.floor(Math.random() * (CHALLENGES.length - 1));
+      if(j >= i) j += 1; // ensures j != i with uniform distribution
 
-      if(noRepeats.checked){
-        if(remainingA.length === 0) remainingA = [...A];
-        if(remainingB.length === 0) remainingB = [...B];
-        // If current remaining items include values not in the latest lists, resync
-        remainingA = remainingA.filter(x => A.includes(x));
-        remainingB = remainingB.filter(x => B.includes(x));
-      } else {
-        remainingA = [...A];
-        remainingB = [...B];
-      }
-
-      const a = pickRandom(remainingA);
-      const b = pickRandom(remainingB);
-
-      if(a == null || b == null){
-        flash('Nothing left to draw — hit Reset or add more items.');
-        return;
-      }
-
-      outA.textContent = a;
-      outB.textContent = b;
+      outA.textContent = CHALLENGES[i];
+      outB.textContent = CHALLENGES[j];
     }
 
-    function reset(){
-      remainingA = [];
-      remainingB = [];
-      outA.textContent = '—';
-      outB.textContent = '—';
-    }
-
-    function flash(msg){
-      drawBtn.disabled = true;
-      const prev = drawBtn.textContent;
-      drawBtn.textContent = msg;
-      setTimeout(() => { drawBtn.textContent = prev; drawBtn.disabled = false; }, 1100);
-    }
-
-    // Encode lists into URL for easy sharing
-    function saveToUrl(){
-      const A = parseList(listA.value).join('|');
-      const B = parseList(listB.value).join('|');
-      const params = new URLSearchParams();
-      if(A) params.set('a', A);
-      if(B) params.set('b', B);
-      params.set('norepeat', noRepeats.checked ? '1' : '0');
-      const url = location.origin + location.pathname + (params.toString()? ('?' + params.toString()) : '');
-      navigator.clipboard.writeText(url).then(() => flash('Link copied!')).catch(() => alert(url));
-    }
-
-    function loadFromUrl(){
-      const q = new URLSearchParams(location.search);
-      const a = q.get('a');
-      const b = q.get('b');
-      const nr = q.get('norepeat');
-      if(a) listA.value = a.split('|').join('\n');
-      if(b) listB.value = b.split('|').join('\n');
-      if(nr) noRepeats.checked = nr === '1';
-    }
-
-    // Demo content to make testing instant
-    function loadDemo(){
-      listA.value = ['Alice','Bob','Charlie','Dana','Eli'].join('\n');
-      listB.value = ['Team Red','Team Blue','Team Green','Team Yellow'].join('\n');
-      reset();
-    }
-
-    // Wire up
-    drawBtn.addEventListener('click', draw);
-    resetBtn.addEventListener('click', reset);
-    byId('saveUrl').addEventListener('click', saveToUrl);
-    byId('loadDemo').addEventListener('click', loadDemo);
-    window.addEventListener('load', loadFromUrl);
+    drawBtn.addEventListener('click', drawTwoDifferent);
   </script>
 </body>
 </html>
