@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Random Pair Picker</title>
+  <style>
+    :root { --bg:#0b0f14; --card:#111826; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa; }
+    * { box-sizing:border-box; }
+    html, body { height:100%; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: radial-gradient(1200px 600px at 50% -10%, #142034 0, #0b0f14 60%); color:var(--text); display:flex; align-items:center; justify-content:center; }
+    .wrap { width:min(980px, 92vw); }
+    .card { background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.08); border-radius:18px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.25); }
+    h1 { margin:0 0 10px; font-size:clamp(22px, 2.8vw, 32px); letter-spacing:0.2px; }
+    p { margin:0; color:var(--muted); }
+
+    .grid { display:grid; grid-template-columns: 1fr; gap:16px; margin-top:18px; }
+    @media (min-width: 820px) { .grid{ grid-template-columns: 1fr 1fr; } }
+
+    label { display:block; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin:6px 0; }
+    textarea { width:100%; height:150px; background:#0b1320; color:var(--text); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:10px 12px; resize:vertical; }
+    .controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:14px; }
+    .btn { background:var(--accent); color:#061428; border:none; border-radius:12px; padding:14px 18px; font-weight:700; cursor:pointer; transition: transform .05s ease, filter .2s; }
+    .btn:active { transform: translateY(1px) scale(0.995); }
+    .btn.secondary { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.14); }
+    .btn.small { padding:9px 12px; font-weight:600; }
+    .spacer { flex:1; }
+
+    .inline { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:14px; }
+    input[type="checkbox"] { width:16px; height:16px; }
+
+    .result { margin-top:18px; display:grid; grid-template-columns: 1fr; gap:14px; }
+    @media (min-width:700px){ .result{ grid-template-columns: 1fr 1fr; } }
+    .pill { background:#0b1320; border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:16px 18px; font-size:clamp(16px, 2.2vw, 22px); min-height:58px; display:flex; align-items:center; justify-content:center; text-align:center; }
+
+    .footer { margin-top:14px; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .link { color:#93c5fd; text-decoration:underline; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Random Pair Picker</h1>
+      <p>Paste your two lists (one item per line). Hit <strong>Draw</strong> to show a random pair. Optionally avoid repeats until you reset.</p>
+
+      <div class="grid">
+        <div>
+          <label for="listA">List A</label>
+          <textarea id="listA" placeholder="e.g. Alice\nBob\nCharlie\n…"></textarea>
+        </div>
+        <div>
+          <label for="listB">List B</label>
+          <textarea id="listB" placeholder="e.g. Task 1\nTask 2\nTask 3\n…"></textarea>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn" id="drawBtn">🎲 Draw</button>
+        <button class="btn secondary" id="resetBtn" title="Clears history of picks">Reset</button>
+        <span class="spacer"></span>
+        <label class="inline">
+          <input type="checkbox" id="noRepeats" checked />
+          No repeats until reset
+        </label>
+      </div>
+
+      <div class="result">
+        <div class="pill" id="outA">—</div>
+        <div class="pill" id="outB">—</div>
+      </div>
+
+      <div class="footer">
+        <span class="link" id="saveUrl">Shareable setup link</span>
+        <span>·</span>
+        <span class="link" id="loadDemo">Load demo lists</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Utilities
+    const byId = id => document.getElementById(id);
+    const listA = byId('listA');
+    const listB = byId('listB');
+    const outA = byId('outA');
+    const outB = byId('outB');
+    const drawBtn = byId('drawBtn');
+    const resetBtn = byId('resetBtn');
+    const noRepeats = byId('noRepeats');
+
+    // State for no-repeat draws
+    let remainingA = [];
+    let remainingB = [];
+
+    function parseList(text){
+      return text
+        .split(/\r?\n|,/)
+        .map(s => s.trim())
+        .filter(Boolean);
+    }
+
+    function pickRandom(arr){
+      if(arr.length === 0) return null;
+      const i = Math.floor(Math.random() * arr.length);
+      return arr.splice(i,1)[0]; // mutates to support no-repeat
+    }
+
+    function draw(){
+      const A = parseList(listA.value);
+      const B = parseList(listB.value);
+      if(A.length === 0 || B.length === 0){
+        flash('Please fill both lists.');
+        return;
+      }
+
+      if(noRepeats.checked){
+        if(remainingA.length === 0) remainingA = [...A];
+        if(remainingB.length === 0) remainingB = [...B];
+        // If current remaining items include values not in the latest lists, resync
+        remainingA = remainingA.filter(x => A.includes(x));
+        remainingB = remainingB.filter(x => B.includes(x));
+      } else {
+        remainingA = [...A];
+        remainingB = [...B];
+      }
+
+      const a = pickRandom(remainingA);
+      const b = pickRandom(remainingB);
+
+      if(a == null || b == null){
+        flash('Nothing left to draw — hit Reset or add more items.');
+        return;
+      }
+
+      outA.textContent = a;
+      outB.textContent = b;
+    }
+
+    function reset(){
+      remainingA = [];
+      remainingB = [];
+      outA.textContent = '—';
+      outB.textContent = '—';
+    }
+
+    function flash(msg){
+      drawBtn.disabled = true;
+      const prev = drawBtn.textContent;
+      drawBtn.textContent = msg;
+      setTimeout(() => { drawBtn.textContent = prev; drawBtn.disabled = false; }, 1100);
+    }
+
+    // Encode lists into URL for easy sharing
+    function saveToUrl(){
+      const A = parseList(listA.value).join('|');
+      const B = parseList(listB.value).join('|');
+      const params = new URLSearchParams();
+      if(A) params.set('a', A);
+      if(B) params.set('b', B);
+      params.set('norepeat', noRepeats.checked ? '1' : '0');
+      const url = location.origin + location.pathname + (params.toString()? ('?' + params.toString()) : '');
+      navigator.clipboard.writeText(url).then(() => flash('Link copied!')).catch(() => alert(url));
+    }
+
+    function loadFromUrl(){
+      const q = new URLSearchParams(location.search);
+      const a = q.get('a');
+      const b = q.get('b');
+      const nr = q.get('norepeat');
+      if(a) listA.value = a.split('|').join('\n');
+      if(b) listB.value = b.split('|').join('\n');
+      if(nr) noRepeats.checked = nr === '1';
+    }
+
+    // Demo content to make testing instant
+    function loadDemo(){
+      listA.value = ['Alice','Bob','Charlie','Dana','Eli'].join('\n');
+      listB.value = ['Team Red','Team Blue','Team Green','Team Yellow'].join('\n');
+      reset();
+    }
+
+    // Wire up
+    drawBtn.addEventListener('click', draw);
+    resetBtn.addEventListener('click', reset);
+    byId('saveUrl').addEventListener('click', saveToUrl);
+    byId('loadDemo').addEventListener('click', loadDemo);
+    window.addEventListener('load', loadFromUrl);
+  </script>
+</body>
+</html>
