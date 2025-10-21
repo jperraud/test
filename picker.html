@@ -53,7 +53,7 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>AlPINA+SANA Lucerne Challenge</h1>
+      <h1>Random Challenge Duo — Versus Mode</h1>
       <p>Draw two different challenges: one for <strong>your team</strong> and one for <strong>the other team</strong>.</p>
 
       <div class="controls">
@@ -78,8 +78,8 @@
   </div>
 
   <script>
-    // You can mix strings (normal challenges) and objects with { text, competition }.
-    // Any item marked competition:true will only appear as the first (your team) challenge.
+    // Deck / bag draw: no repeats until the bag refills (reshuffle).
+    // Mix strings (normal) and objects { text, competition } where competition=true only appears as the first card.
     const CHALLENGES = [
       'Take a selfie with a red umbrella',
       'Jump into the lake (one person only)',
@@ -99,49 +99,60 @@
     const drawBtn = byId('drawBtn');
     const badgeComp = byId('badgeComp');
 
-    function rand(n){ return Math.floor(Math.random() * n); }
+    function shuffle(arr){
+      for(let i = arr.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // Bags for no-repeat draws
+    let bagFirst = [];
+    let bagSecond = [];
+
+    function refillFirst(){ bagFirst = shuffle([...NORMALIZED]); }
+    function refillSecond(){ bagSecond = shuffle(NORMALIZED.filter(x => !x.competition)); }
+
+    // Ensure bags are initially filled
+    refillFirst();
+    refillSecond();
+
+    function drawSecond(excludeText){
+      // find an item in bagSecond that isn't the excluded text
+      let idx = bagSecond.findIndex(x => x.text !== excludeText);
+      if(idx === -1){
+        // Refill and try once more
+        refillSecond();
+        idx = bagSecond.findIndex(x => x.text !== excludeText);
+        if(idx === -1){
+          return null; // not possible normally unless only one non-competition equals the first
+        }
+      }
+      const [picked] = bagSecond.splice(idx, 1);
+      return picked;
+    }
 
     function drawTwoDifferent(){
-      const secondEligible = NORMALIZED.filter(x => !x.competition);
-      if (NORMALIZED.length < 1 || secondEligible.length < 1) {
-        outA.textContent = 'Need at least 1 normal + 1 any challenge';
-        outB.textContent = '';
-        badgeComp.classList.remove('show');
-        return;
-      }
+      if(bagFirst.length === 0) refillFirst();
+      const first = bagFirst.pop();
 
-      // Pick first from ALL items
-      const i = rand(NORMALIZED.length);
-      const first = NORMALIZED[i];
-
-      // If the first is a competition, leave the other side empty
-      if (first.competition) {
+      if(first.competition){
         outA.textContent = first.text;
         outB.textContent = '';
         badgeComp.classList.add('show');
-        // brief flash
-        [outA].forEach(el => el.animate([
+        outA.animate([
           { transform:'scale(0.98)', filter:'brightness(1.2)' },
           { transform:'scale(1)',   filter:'brightness(1)' }
-        ], { duration:260, easing:'ease-out' }));
+        ], { duration:260, easing:'ease-out' });
         return;
       }
 
-      // Otherwise, draw the second from eligible items excluding the first
-      const pool = secondEligible.filter(x => x.text !== first.text);
-      if (pool.length === 0) {
-        outA.textContent = first.text;
-        outB.textContent = '';
-        badgeComp.classList.remove('show');
-        return;
-      }
-      const second = pool[rand(pool.length)];
-
+      const second = drawSecond(first.text);
       outA.textContent = first.text;
-      outB.textContent = second.text;
+      outB.textContent = second ? second.text : '';
       badgeComp.classList.remove('show');
 
-      // Brief highlight flash
       [outA, outB].forEach(el => {
         el.animate([
           { transform:'scale(0.98)', filter:'brightness(1.2)' },
