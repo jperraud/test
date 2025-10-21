@@ -3,25 +3,49 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Random Challenge Duo</title>
+  <title>Random Challenge Duo — Versus Mode</title>
   <style>
-    :root { --bg:#0b0f14; --card:#111826; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa; }
+    :root {
+      --bg:#0b0f14; --card:#111826; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa;
+      --ring: rgba(96,165,250,.45);
+    }
     * { box-sizing:border-box; }
     html, body { height:100%; }
-    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: radial-gradient(1200px 600px at 50% -10%, #142034 0, #0b0f14 60%); color:var(--text); display:flex; align-items:center; justify-content:center; }
+    body {
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 50% -10%, #142034 0, #0b0f14 60%);
+      color:var(--text); display:flex; align-items:center; justify-content:center;
+    }
     .wrap { width:min(980px, 92vw); }
-    .card { background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.08); border-radius:18px; padding:20px; box-shadow:0 10px 40px rgba(0,0,0,0.25); }
-    h1 { margin:0 0 10px; font-size:clamp(22px, 2.8vw, 32px); letter-spacing:0.2px; }
-    p { margin:0; color:var(--muted); }
+    .card {
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08); border-radius:18px; padding:22px;
+      box-shadow:0 10px 40px rgba(0,0,0,0.25);
+    }
+    h1 { margin:0 0 6px; font-size:clamp(22px, 2.8vw, 32px); letter-spacing:0.2px; }
+    p  { margin:0; color:var(--muted); }
 
     .controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:18px; }
-    .btn { background:var(--accent); color:#061428; border:none; border-radius:12px; padding:14px 18px; font-weight:700; cursor:pointer; transition: transform .05s ease, filter .2s; }
+    .btn {
+      background:var(--accent); color:#061428; border:none; border-radius:12px; padding:14px 18px;
+      font-weight:700; cursor:pointer; transition: transform .05s ease, filter .2s, box-shadow .2s;
+      box-shadow: 0 0 0 0 var(--ring);
+    }
+    .btn:focus { outline:none; box-shadow: 0 0 0 6px var(--ring); }
     .btn:active { transform: translateY(1px) scale(0.995); }
     .btn.secondary { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.14); }
 
     .result { margin-top:18px; display:grid; grid-template-columns: 1fr; gap:14px; }
-    @media (min-width:700px){ .result{ grid-template-columns: 1fr 1fr; } }
-    .pill { background:#0b1320; border:1px solid rgba(255,255,255,0.10); border-radius:14px; padding:16px 18px; font-size:clamp(16px, 2.2vw, 22px); min-height:58px; display:flex; align-items:center; justify-content:center; text-align:center; }
+    @media (min-width:760px){ .result{ grid-template-columns: 1fr 1fr; } }
+
+    .col { background:#0b1320; border:1px solid rgba(255,255,255,0.10); border-radius:16px; padding:16px; }
+    .label { color:var(--muted); font-size:12px; letter-spacing:.3px; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+    .badge { font-size:10px; font-weight:700; color:#061428; background:var(--accent); border-radius:999px; padding:4px 8px; display:none; }
+    .badge.show { display:inline-block; }
+
+    .challenge { margin-top:8px; font-size:clamp(18px, 2.3vw, 24px); min-height:64px; display:flex; align-items:center; }
+
+    .vs { display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:700; letter-spacing:.3px; text-transform:uppercase; opacity:.7; }
 
     .footer { margin-top:14px; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   </style>
@@ -29,16 +53,22 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Random Challenge Duo</h1>
-      <p>Click the button to draw <strong>two different</strong> challenges from the list.</p>
+      <h1>AlPINA+SANA Lucerne Challenge</h1>
+      <p>Draw two different challenges: one for <strong>your team</strong> and one for <strong>the other team</strong>.</p>
 
       <div class="controls">
-        <button class="btn" id="drawBtn">🎲 Draw</button>
+        <button class="btn" id="drawBtn">🎲 Get challenges</button>
       </div>
 
-      <div class="result">
-        <div class="pill" id="outA">—</div>
-        <div class="pill" id="outB">—</div>
+      <div class="result" aria-live="polite" aria-atomic="true">
+        <div class="col">
+          <div class="label">If your team does: <span id="badgeComp" class="badge">Competition</span></div>
+          <div class="challenge" id="outA">—</div>
+        </div>
+        <div class="col">
+          <div class="label">…the other team needs to:</div>
+          <div class="challenge" id="outB">—</div>
+        </div>
       </div>
 
       <div class="footer">
@@ -48,68 +78,76 @@
   </div>
 
   <script>
-    // Single master list of challenges. Edit freely.
-    // Keep items simple text; avoid quotes inside unless escaped.
+    // You can mix strings (normal challenges) and objects with { text, competition }.
+    // Any item marked competition:true will only appear as the first (your team) challenge.
     const CHALLENGES = [
-      'Take a group selfie with a stranger',
-      'Trade a paperclip for something better',
-      'Find 3 objects that form your team colors',
-      'Teach someone a 10-second dance',
-      'High-five five different people',
-      'Make a paper airplane that flies 5 meters',
-      'Balance an object on your head for 20 seconds',
-      'Tell a two-line joke to another team',
-      'Recreate a famous movie pose',
-      'Spell the company name with bodies',
-      'Build the tallest tower from 10 items',
-      'Compliment three teammates',
-      'Draw a logo with your non-dominant hand',
-      'Whistle a tune—others guess it',
-      'Find someone who can speak 3+ languages',
-      'Snap a pic of something that starts with “Z”',
-      'Do 10 jumping jacks together',
-      'Teach a teammate a phrase in another language',
-      'Create a handshake in 30 seconds',
-      'Mime a profession—others guess',
-      'Find an object older than you',
-      'Build a bridge from office supplies',
-      'Write a haiku about lunch',
-      'Take a photo with everyone wearing hats',
-      'Find a hidden smiley (draw one & hide it)',
-      'Share your most-used phone app',
-      'Name 5 countries in 10 seconds',
-      'Find three items shaped like a circle',
-      'Teach the group a tongue twister',
-      'Balance a coin on its edge for 5 seconds',
-      'Do a slow-motion race',
-      'Find someone born in the same month',
-      'Make a shadow puppet animal',
-      'Tell a fun fact about your hometown',
-      'Guess a song from a hummed melody',
-      'Build a pyramid with cups (or hands)',
-      'Make a human triangle pose',
-      'Invent a 3-word team motto',
-      'Draw a map of the venue from memory'
+      'Take a selfie with a red umbrella',
+      'Jump into the lake (one person only)',
+      'Take a selfie with a cappuccino that has swan latte art',
+      'Throw a coin into a fountain',
+      'Buy a protein ice cream',
+      { text: 'You and the other team have 10 minutes times. Who makes a picture of a food label with the highest protein content (Winner gets one point).', competition: true },
+      { text: 'You and the other team have 10 minutes times. Who makes a picture of longest street name.', competition: true }
     ];
+
+    // Normalize everything to objects { text, competition }
+    const NORMALIZED = CHALLENGES.map(c => typeof c === 'string' ? ({ text: c, competition: false }) : ({ text: c.text, competition: !!c.competition }));
 
     const byId = id => document.getElementById(id);
     const outA = byId('outA');
     const outB = byId('outB');
     const drawBtn = byId('drawBtn');
+    const badgeComp = byId('badgeComp');
+
+    function rand(n){ return Math.floor(Math.random() * n); }
 
     function drawTwoDifferent(){
-      if(CHALLENGES.length < 2){
-        outA.textContent = 'Need at least 2 challenges';
-        outB.textContent = 'Add more to the list';
+      const secondEligible = NORMALIZED.filter(x => !x.competition);
+      if (NORMALIZED.length < 1 || secondEligible.length < 1) {
+        outA.textContent = 'Need at least 1 normal + 1 any challenge';
+        outB.textContent = '';
+        badgeComp.classList.remove('show');
         return;
       }
-      // Pick two distinct random indices
-      const i = Math.floor(Math.random() * CHALLENGES.length);
-      let j = Math.floor(Math.random() * (CHALLENGES.length - 1));
-      if(j >= i) j += 1; // ensures j != i with uniform distribution
 
-      outA.textContent = CHALLENGES[i];
-      outB.textContent = CHALLENGES[j];
+      // Pick first from ALL items
+      const i = rand(NORMALIZED.length);
+      const first = NORMALIZED[i];
+
+      // If the first is a competition, leave the other side empty
+      if (first.competition) {
+        outA.textContent = first.text;
+        outB.textContent = '';
+        badgeComp.classList.add('show');
+        // brief flash
+        [outA].forEach(el => el.animate([
+          { transform:'scale(0.98)', filter:'brightness(1.2)' },
+          { transform:'scale(1)',   filter:'brightness(1)' }
+        ], { duration:260, easing:'ease-out' }));
+        return;
+      }
+
+      // Otherwise, draw the second from eligible items excluding the first
+      const pool = secondEligible.filter(x => x.text !== first.text);
+      if (pool.length === 0) {
+        outA.textContent = first.text;
+        outB.textContent = '';
+        badgeComp.classList.remove('show');
+        return;
+      }
+      const second = pool[rand(pool.length)];
+
+      outA.textContent = first.text;
+      outB.textContent = second.text;
+      badgeComp.classList.remove('show');
+
+      // Brief highlight flash
+      [outA, outB].forEach(el => {
+        el.animate([
+          { transform:'scale(0.98)', filter:'brightness(1.2)' },
+          { transform:'scale(1)',   filter:'brightness(1)' }
+        ], { duration:260, easing:'ease-out' });
+      });
     }
 
     drawBtn.addEventListener('click', drawTwoDifferent);
