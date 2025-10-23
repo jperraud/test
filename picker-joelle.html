@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Random Challenge Duo — Versus Mode</title>
+  <title>Random Challenges - Team Joëlle</title>
   <style>
     :root {
       --bg:#0b0f14; --card:#111826; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa;
@@ -81,13 +81,16 @@
     // Deck / bag draw: no repeats until the bag refills (reshuffle).
     // Mix strings (normal) and objects { text, competition } where competition=true only appears as the first card.
     const CHALLENGES = [
-      'Take a selfie with a red umbrella',
-      'Jump into the lake (one person only)',
-      'Take a selfie with a cappuccino that has swan latte art',
-      'Throw a coin into a fountain',
-      'Buy a protein ice cream',
-      { text: 'You and the other team have 10 minutes times. Who makes a picture of a food label with the highest protein content (Winner gets one point).', competition: true },
-      { text: 'You and the other team have 10 minutes times. Who makes a picture of longest street name.', competition: true }
+      // NEW
+      'Take a group selfie with a red umbrella',
+      'Find a restaurant name that includes the name of an animal.',
+      'Find a food specialty from Lucerne and take a picture of it or buy it.'
+      'Each teammate must find an object that starts with the same letter as their first name. Photos required.',
+      'Enjoy a coffee or snack at LUKS.',
+      'Find and take a picture of the Lucerne flag',
+      
+      { text: 'Jump into the lake (one point per person).', competition: true }
+      { text: 'Find the Highest Point: Which team can get to the highest public point nearby in 10 minutes. Take a picture of at least one team member there.', competition: true }
     ];
 
     // Normalize everything to objects { text, competition }
