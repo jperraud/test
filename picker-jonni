@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Random Challenge Duo — Versus Mode</title>
+  <style>
+    :root {
+      --bg:#0b0f14; --card:#111826; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa;
+      --ring: rgba(96,165,250,.45);
+    }
+    * { box-sizing:border-box; }
+    html, body { height:100%; }
+    body {
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 50% -10%, #142034 0, #0b0f14 60%);
+      color:var(--text); display:flex; align-items:center; justify-content:center;
+    }
+    .wrap { width:min(980px, 92vw); }
+    .card {
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid rgba(255,255,255,0.08); border-radius:18px; padding:22px;
+      box-shadow:0 10px 40px rgba(0,0,0,0.25);
+    }
+    h1 { margin:0 0 6px; font-size:clamp(22px, 2.8vw, 32px); letter-spacing:0.2px; }
+    p  { margin:0; color:var(--muted); }
+
+    .controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:18px; }
+    .btn {
+      background:var(--accent); color:#061428; border:none; border-radius:12px; padding:14px 18px;
+      font-weight:700; cursor:pointer; transition: transform .05s ease, filter .2s, box-shadow .2s;
+      box-shadow: 0 0 0 0 var(--ring);
+    }
+    .btn:focus { outline:none; box-shadow: 0 0 0 6px var(--ring); }
+    .btn:active { transform: translateY(1px) scale(0.995); }
+    .btn.secondary { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.14); }
+
+    .result { margin-top:18px; display:grid; grid-template-columns: 1fr; gap:14px; }
+    @media (min-width:760px){ .result{ grid-template-columns: 1fr 1fr; } }
+
+    .col { background:#0b1320; border:1px solid rgba(255,255,255,0.10); border-radius:16px; padding:16px; }
+    .label { color:var(--muted); font-size:12px; letter-spacing:.3px; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+    .badge { font-size:10px; font-weight:700; color:#061428; background:var(--accent); border-radius:999px; padding:4px 8px; display:none; }
+    .badge.show { display:inline-block; }
+
+    .challenge { margin-top:8px; font-size:clamp(18px, 2.3vw, 24px); min-height:64px; display:flex; align-items:center; }
+
+    .vs { display:flex; align-items:center; justify-content:center; color:var(--muted); font-weight:700; letter-spacing:.3px; text-transform:uppercase; opacity:.7; }
+
+    .footer { margin-top:14px; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Random Challenge Duo — Versus Mode</h1>
+      <p>Draw two different challenges: one for <strong>your team</strong> and one for <strong>the other team</strong>.</p>
+
+      <div class="controls">
+        <button class="btn" id="drawBtn">🎲 Get challenges</button>
+      </div>
+
+      <div class="result" aria-live="polite" aria-atomic="true">
+        <div class="col">
+          <div class="label">If your team does: <span id="badgeComp" class="badge">Competition</span></div>
+          <div class="challenge" id="outA">—</div>
+        </div>
+        <div class="col">
+          <div class="label">…the other team needs to:</div>
+          <div class="challenge" id="outB">—</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>List is baked into the page (no inputs, no storage).</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Deck / bag draw: no repeats until the bag refills (reshuffle).
+    // Mix strings (normal) and objects { text, competition } where competition=true only appears as the first card.
+    const CHALLENGES = [
+      'Take a selfie with a red umbrella',
+      'Jump into the lake (one person only)',
+      'Take a selfie with a cappuccino that has swan latte art',
+      'Throw a coin into a fountain',
+      'Buy a protein ice cream',
+      { text: 'You and the other team have 10 minutes times. Who makes a picture of a food label with the highest protein content (Winner gets one point).', competition: true },
+      { text: 'You and the other team have 10 minutes times. Who makes a picture of longest street name.', competition: true }
+    ];
+
+    // Normalize everything to objects { text, competition }
+    const NORMALIZED = CHALLENGES.map(c => typeof c === 'string' ? ({ text: c, competition: false }) : ({ text: c.text, competition: !!c.competition }));
+
+    const byId = id => document.getElementById(id);
+    const outA = byId('outA');
+    const outB = byId('outB');
+    const drawBtn = byId('drawBtn');
+    const badgeComp = byId('badgeComp');
+
+    function shuffle(arr){
+      for(let i = arr.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // Bags for no-repeat draws
+    let bagFirst = [];
+    let bagSecond = [];
+
+    function refillFirst(){ bagFirst = shuffle([...NORMALIZED]); }
+    function refillSecond(){ bagSecond = shuffle(NORMALIZED.filter(x => !x.competition)); }
+
+    // Ensure bags are initially filled
+    refillFirst();
+    refillSecond();
+
+    function drawSecond(excludeText){
+      // find an item in bagSecond that isn't the excluded text
+      let idx = bagSecond.findIndex(x => x.text !== excludeText);
+      if(idx === -1){
+        // Refill and try once more
+        refillSecond();
+        idx = bagSecond.findIndex(x => x.text !== excludeText);
+        if(idx === -1){
+          return null; // not possible normally unless only one non-competition equals the first
+        }
+      }
+      const [picked] = bagSecond.splice(idx, 1);
+      return picked;
+    }
+
+    function drawTwoDifferent(){
+      if(bagFirst.length === 0) refillFirst();
+      const first = bagFirst.pop();
+
+      if(first.competition){
+        outA.textContent = first.text;
+        outB.textContent = '';
+        badgeComp.classList.add('show');
+        outA.animate([
+          { transform:'scale(0.98)', filter:'brightness(1.2)' },
+          { transform:'scale(1)',   filter:'brightness(1)' }
+        ], { duration:260, easing:'ease-out' });
+        return;
+      }
+
+      const second = drawSecond(first.text);
+      outA.textContent = first.text;
+      outB.textContent = second ? second.text : '';
+      badgeComp.classList.remove('show');
+
+      [outA, outB].forEach(el => {
+        el.animate([
+          { transform:'scale(0.98)', filter:'brightness(1.2)' },
+          { transform:'scale(1)',   filter:'brightness(1)' }
+        ], { duration:260, easing:'ease-out' });
+      });
+    }
+
+    drawBtn.addEventListener('click', drawTwoDifferent);
+  </script>
+</body>
+</html>
