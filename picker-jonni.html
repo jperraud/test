@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Random Challenge Duo — Versus Mode</title>
+  <title>Random Challenge Duo — Team Jonni</title>
   <style>
     :root {
       --bg:#0b0f14; --card:#111826; --muted:#94a3b8; --text:#e5e7eb; --accent:#60a5fa;
@@ -81,13 +81,16 @@
     // Deck / bag draw: no repeats until the bag refills (reshuffle).
     // Mix strings (normal) and objects { text, competition } where competition=true only appears as the first card.
     const CHALLENGES = [
-      'Take a selfie with a red umbrella',
-      'Jump into the lake (one person only)',
+      // NEW
       'Take a selfie with a cappuccino that has swan latte art',
-      'Throw a coin into a fountain',
       'Buy a protein ice cream',
+      'Find a statue or sculpture and imitate its pose exactly. Take a photo next to it.',
+      'Throw a coin into a fountain',
+      'Find and buy a beer brewed in Lucerne.',
+      
       { text: 'You and the other team have 10 minutes times. Who makes a picture of a food label with the highest protein content (Winner gets one point).', competition: true },
       { text: 'You and the other team have 10 minutes times. Who makes a picture of longest street name.', competition: true }
+      { text: 'Which team makes it first onto Kapellbrücke?.', competition: true }
     ];
 
     // Normalize everything to objects { text, competition }
